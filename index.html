@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cronómetro Móvil</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            height: 100vh;
+            background-color: #000;
+            color: #fff;
+            padding: 20px;
+            touch-action: manipulation;
+        }
+        
+        .timer-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+            width: 100%;
+        }
+        
+        .time {
+            font-size: 20vw;
+            font-weight: 300;
+            letter-spacing: -3px;
+            text-align: center;
+            line-height: 0.9;
+        }
+        
+        .separator {
+            font-size: 15vw;
+            color: #444;
+            margin: -5vw 0;
+        }
+        
+        .controls {
+            display: flex;
+            width: 100%;
+            max-width: 400px;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 20px 0;
+            border: none;
+            border-radius: 50px;
+            font-size: 6vw;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        #startPause {
+            background: #00c853;
+            color: white;
+        }
+        
+        #startPause.running {
+            background: #ff9100;
+        }
+        
+        #reset {
+            background: #333;
+            color: white;
+        }
+        
+        @media (min-width: 768px) {
+            .time {
+                font-size: 150px;
+            }
+            .separator {
+                font-size: 100px;
+                margin: -40px 0;
+            }
+            .btn {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="timer-display">
+        <div class="time" id="minutes">00</div>
+        <div class="separator">:</div>
+        <div class="time" id="seconds">00</div>
+    </div>
+    
+    <div class="controls">
+        <button class="btn" id="reset">Reset</button>
+        <button class="btn" id="startPause">Start</button>
+    </div>
+
+    <script>
+        // Elementos del DOM
+        const minutesDisplay = document.getElementById('minutes');
+        const secondsDisplay = document.getElementById('seconds');
+        const startPauseBtn = document.getElementById('startPause');
+        const resetBtn = document.getElementById('reset');
+        
+        // Variables de estado
+        let timer = null;
+        let isRunning = false;
+        let totalSeconds = 0;
+        
+        // Actualizar display
+        function updateDisplay() {
+            const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+            
+            minutesDisplay.textContent = minutes;
+            secondsDisplay.textContent = seconds;
+        }
+        
+        // Iniciar cronómetro
+        function startTimer() {
+            if (!isRunning) {
+                timer = setInterval(() => {
+                    totalSeconds++;
+                    updateDisplay();
+                }, 1000);
+                isRunning = true;
+                startPauseBtn.textContent = 'Pause';
+                startPauseBtn.classList.add('running');
+            }
+        }
+        
+        // Pausar cronómetro
+        function pauseTimer() {
+            clearInterval(timer);
+            isRunning = false;
+            startPauseBtn.textContent = 'Start';
+            startPauseBtn.classList.remove('running');
+        }
+        
+        // Reiniciar cronómetro
+        function resetTimer() {
+            pauseTimer();
+            totalSeconds = 0;
+            updateDisplay();
+        }
+        
+        // Toggle start/pause
+        function toggleTimer() {
+            if (isRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        }
+        
+        // Event listeners
+        startPauseBtn.addEventListener('click', toggleTimer);
+        resetBtn.addEventListener('click', resetTimer);
+        
+        // Soporte para eventos táctiles
+        document.addEventListener('touchstart', function() {}, {passive: true});
+        
+        // Inicializar display
+        updateDisplay();
+    </script>
+</body>
+</html>
