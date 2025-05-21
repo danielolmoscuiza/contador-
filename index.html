@@ -345,9 +345,42 @@
         // Inicializar
         syncTimer();
         updateDisplay();
-    </script>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script>
+// Configuración COMPLETA y CORRECTA con tu proyecto
+const firebaseConfig = {
+  apiKey: "AIzaSyBTrRb7O7VrCtF0pCkUjrpCtqMJ-gAXvxE",
+  authDomain: "contador-c5c0e.firebaseapp.com",
+  databaseURL: "https://contador-c5c0e-default-rtdb.firebaseio.com",
+  projectId: "contador-c5c0e",
+  storageBucket: "contador-c5c0e.appspot.com",
+  messagingSenderId: "85548257276",
+  appId: "1:85548257276:web:af2ef1929b58020adcac79",
+  measurementId: "G-87G77KTVH0"
+};
+
+// Inicialización mejorada con verificación
+try {
+  firebase.initializeApp(firebaseConfig);
+  console.log("Firebase inicializado correctamente");
+  
+  // Verificar conexión en tiempo real
+  const dbRef = firebase.database().ref('.info/connected');
+  dbRef.on('value', (snap) => {
+    const connectionStatus = document.getElementById('connectionStatus');
+    if (snap.val() === true) {
+      connectionStatus.classList.add('connected');
+      console.log("Conectado a Firebase");
+    } else {
+      connectionStatus.classList.remove('connected');
+      console.log("Desconectado de Firebase - Verifica:");
+      console.log("1. Habilitaste Realtime Database?");
+      console.log("2. Las reglas de seguridad permiten acceso?");
+      console.log("3. Tienes conexión a internet?");
+    }
+  });
+} catch (error) {
+  console.error("Error inicializando Firebase:", error);
+}
+</script>
 </body>
 </html>
