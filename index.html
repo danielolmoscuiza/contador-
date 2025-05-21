@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cronómetro Móvil</title>
+    <title>Cronómetro Digital Fullscreen</title>
     <style>
         * {
             margin: 0;
@@ -13,98 +13,121 @@
         }
         
         body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
+            font-family: 'Digital-7', monospace;
             height: 100vh;
             background-color: #000;
-            color: #fff;
-            padding: 20px;
+            color: #0f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
             touch-action: manipulation;
         }
         
-        .timer-display {
+        @font-face {
+            font-family: 'Digital-7';
+            src: url('https://cdn.jsdelivr.net/gh/raphaelbastide/Digital-7@master/digital-7 (mono).ttf') format('truetype');
+        }
+        
+        .display-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        
+        .time-display {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            flex-grow: 1;
             width: 100%;
+            text-align: center;
         }
         
-        .time {
-            font-size: 20vw;
-            font-weight: 300;
-            letter-spacing: -3px;
-            text-align: center;
-            line-height: 0.9;
+        .time-part {
+            font-size: 30vh;
+            line-height: 0.8;
+            text-shadow: 0 0 10px #0f0;
+            letter-spacing: -5px;
         }
         
         .separator {
-            font-size: 15vw;
-            color: #444;
-            margin: -5vw 0;
+            font-size: 15vh;
+            color: #0a0;
+            height: 5vh;
         }
         
         .controls {
             display: flex;
             width: 100%;
-            max-width: 400px;
-            gap: 15px;
-            margin-bottom: 20px;
+            padding: 10px;
         }
         
         .btn {
             flex: 1;
-            padding: 20px 0;
-            border: none;
-            border-radius: 50px;
-            font-size: 6vw;
-            font-weight: 600;
+            padding: 20px;
+            margin: 5px;
+            border: 2px solid #0a0;
+            border-radius: 10px;
+            background: transparent;
+            color: #0f0;
+            font-family: 'Digital-7', monospace;
+            font-size: 5vh;
+            text-shadow: 0 0 5px #0f0;
             cursor: pointer;
             transition: all 0.2s;
         }
         
-        #startPause {
-            background: #00c853;
-            color: white;
+        .btn:active {
+            background: rgba(0, 255, 0, 0.1);
         }
         
         #startPause.running {
-            background: #ff9100;
+            color: #f00;
+            border-color: #f00;
+            text-shadow: 0 0 5px #f00;
         }
         
-        #reset {
-            background: #333;
-            color: white;
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
         }
         
-        @media (min-width: 768px) {
-            .time {
-                font-size: 150px;
-            }
-            .separator {
-                font-size: 100px;
-                margin: -40px 0;
-            }
-            .btn {
-                font-size: 24px;
-            }
+        .overlay.show {
+            opacity: 0.7;
+        }
+        
+        .play-icon {
+            font-size: 30vh;
+            color: rgba(0, 255, 0, 0.5);
         }
     </style>
 </head>
 <body>
-    <div class="timer-display">
-        <div class="time" id="minutes">00</div>
-        <div class="separator">:</div>
-        <div class="time" id="seconds">00</div>
+    <div class="display-container" id="displayContainer">
+        <div class="time-display">
+            <div class="time-part" id="minutes">00</div>
+            <div class="separator">:</div>
+            <div class="time-part" id="seconds">00</div>
+        </div>
+        <div class="overlay" id="overlay">
+            <div class="play-icon">▶</div>
+        </div>
     </div>
     
     <div class="controls">
-        <button class="btn" id="reset">Reset</button>
-        <button class="btn" id="startPause">Start</button>
+        <button class="btn" id="reset">RESET</button>
+        <button class="btn" id="startPause">START</button>
     </div>
 
     <script>
@@ -113,6 +136,8 @@
         const secondsDisplay = document.getElementById('seconds');
         const startPauseBtn = document.getElementById('startPause');
         const resetBtn = document.getElementById('reset');
+        const displayContainer = document.getElementById('displayContainer');
+        const overlay = document.getElementById('overlay');
         
         // Variables de estado
         let timer = null;
@@ -136,8 +161,9 @@
                     updateDisplay();
                 }, 1000);
                 isRunning = true;
-                startPauseBtn.textContent = 'Pause';
+                startPauseBtn.textContent = 'PAUSE';
                 startPauseBtn.classList.add('running');
+                overlay.classList.remove('show');
             }
         }
         
@@ -145,8 +171,9 @@
         function pauseTimer() {
             clearInterval(timer);
             isRunning = false;
-            startPauseBtn.textContent = 'Start';
+            startPauseBtn.textContent = 'START';
             startPauseBtn.classList.remove('running');
+            overlay.classList.add('show');
         }
         
         // Reiniciar cronómetro
@@ -154,6 +181,7 @@
             pauseTimer();
             totalSeconds = 0;
             updateDisplay();
+            overlay.classList.remove('show');
         }
         
         // Toggle start/pause
@@ -168,9 +196,12 @@
         // Event listeners
         startPauseBtn.addEventListener('click', toggleTimer);
         resetBtn.addEventListener('click', resetTimer);
+        displayContainer.addEventListener('click', toggleTimer);
         
-        // Soporte para eventos táctiles
-        document.addEventListener('touchstart', function() {}, {passive: true});
+        // Prevenir zoom
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
         
         // Inicializar display
         updateDisplay();
