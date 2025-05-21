@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cronómetro Digital Fullscreen</title>
+    <title>Cronómetro Sincronizado</title>
     <style>
         * {
             margin: 0;
@@ -35,6 +35,7 @@
             justify-content: center;
             align-items: center;
             position: relative;
+            padding-bottom: 15vh;
         }
         
         .time-display {
@@ -46,14 +47,14 @@
         }
         
         .time-part {
-            font-size: 30vh;
+            font-size: 25vh;
             line-height: 0.8;
             text-shadow: 0 0 10px #0f0;
             letter-spacing: -5px;
         }
         
         .separator {
-            font-size: 15vh;
+            font-size: 12vh;
             color: #0a0;
             height: 5vh;
         }
@@ -61,22 +62,29 @@
         .controls {
             display: flex;
             width: 100%;
-            padding: 10px;
+            padding: 2vh;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #000;
+            z-index: 10;
         }
         
         .btn {
             flex: 1;
-            padding: 20px;
-            margin: 5px;
+            padding: 2vh;
+            margin: 1vh;
             border: 2px solid #0a0;
-            border-radius: 10px;
+            border-radius: 2vh;
             background: transparent;
             color: #0f0;
             font-family: 'Digital-7', monospace;
-            font-size: 5vh;
+            font-size: 4vh;
             text-shadow: 0 0 5px #0f0;
             cursor: pointer;
             transition: all 0.2s;
+            min-height: 8vh;
         }
         
         .btn:active {
@@ -108,12 +116,29 @@
         }
         
         .play-icon {
-            font-size: 30vh;
+            font-size: 25vh;
             color: rgba(0, 255, 0, 0.5);
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #f00;
+            z-index: 100;
+        }
+        
+        .connection-status.connected {
+            background-color: #0f0;
         }
     </style>
 </head>
 <body>
+    <div class="connection-status" id="connectionStatus"></div>
+    
     <div class="display-container" id="displayContainer">
         <div class="time-display">
             <div class="time-part" id="minutes">00</div>
@@ -131,6 +156,21 @@
     </div>
 
     <script>
+        // Tu configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBTrRb7O7VrCtF0pCkUjrpCtqMJ-gAXvxE",
+            authDomain: "contador-c5c0e.firebaseapp.com",
+            projectId: "contador-c5c0e",
+            storageBucket: "contador-c5c0e.appspot.com",
+            messagingSenderId: "85548257276",
+            appId: "1:85548257276:web:af2ef1929b58020adcac79",
+            measurementId: "G-87G77KTVH0"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
         // Elementos del DOM
         const minutesDisplay = document.getElementById('minutes');
         const secondsDisplay = document.getElementById('seconds');
@@ -138,11 +178,85 @@
         const resetBtn = document.getElementById('reset');
         const displayContainer = document.getElementById('displayContainer');
         const overlay = document.getElementById('overlay');
+        const connectionStatus = document.getElementById('connectionStatus');
         
         // Variables de estado
         let timer = null;
         let isRunning = false;
         let totalSeconds = 0;
+        let lastUpdateTime = 0;
+        let isMaster = false;
+        let lastSyncTime = 0;
+        
+        // Verificar conexión
+        firebase.database().ref('.info/connected').on('value', (snapshot) => {
+            if (snapshot.val() === true) {
+                connectionStatus.classList.add('connected');
+                console.log("Conectado a Firebase");
+            } else {
+                connectionStatus.classList.remove('connected');
+                console.log("Desconectado de Firebase");
+            }
+        });
+        
+        // Sincronización con Firebase
+        function syncTimer() {
+            const timerRef = database.ref('timer');
+            
+            // Escuchar cambios en el servidor
+            timerRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Solo actualizar si los datos son más recientes
+                    if (data.timestamp > lastUpdateTime) {
+                        totalSeconds = data.totalSeconds;
+                        isRunning = data.isRunning;
+                        lastUpdateTime = data.timestamp;
+                        lastSyncTime = Date.now();
+                        
+                        updateDisplay();
+                        updateButtonState();
+                        
+                        if (isRunning) {
+                            startLocalTimer();
+                        } else {
+                            pauseLocalTimer();
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Actualizar estado en el servidor
+        function updateServerState() {
+            const timerRef = database.ref('timer');
+            lastUpdateTime = Date.now();
+            timerRef.set({
+                totalSeconds: totalSeconds,
+                isRunning: isRunning,
+                timestamp: lastUpdateTime,
+                lastUpdatedBy: isMaster ? 'master' : 'client'
+            }).catch(error => {
+                console.error("Error al sincronizar:", error);
+            });
+        }
+        
+        // Temporizador local
+        function startLocalTimer() {
+            if (timer) clearInterval(timer);
+            timer = setInterval(() => {
+                totalSeconds++;
+                updateDisplay();
+                // Sincronizar cada segundo cuando está corriendo
+                if (isRunning && isMaster) {
+                    updateServerState();
+                }
+            }, 1000);
+        }
+        
+        function pauseLocalTimer() {
+            clearInterval(timer);
+        }
         
         // Actualizar display
         function updateDisplay() {
@@ -153,34 +267,48 @@
             secondsDisplay.textContent = seconds;
         }
         
-        // Iniciar cronómetro
-        function startTimer() {
-            if (!isRunning) {
-                timer = setInterval(() => {
-                    totalSeconds++;
-                    updateDisplay();
-                }, 1000);
-                isRunning = true;
+        // Actualizar estado de los botones
+        function updateButtonState() {
+            if (isRunning) {
                 startPauseBtn.textContent = 'PAUSE';
                 startPauseBtn.classList.add('running');
                 overlay.classList.remove('show');
+            } else {
+                startPauseBtn.textContent = 'START';
+                startPauseBtn.classList.remove('running');
+                overlay.classList.add('show');
+            }
+        }
+        
+        // Iniciar cronómetro
+        function startTimer() {
+            if (!isRunning) {
+                isRunning = true;
+                isMaster = true;
+                updateButtonState();
+                startLocalTimer();
+                updateServerState();
             }
         }
         
         // Pausar cronómetro
         function pauseTimer() {
-            clearInterval(timer);
-            isRunning = false;
-            startPauseBtn.textContent = 'START';
-            startPauseBtn.classList.remove('running');
-            overlay.classList.add('show');
+            if (isRunning) {
+                isRunning = false;
+                isMaster = true;
+                updateButtonState();
+                pauseLocalTimer();
+                updateServerState();
+            }
         }
         
         // Reiniciar cronómetro
         function resetTimer() {
+            isMaster = true;
             pauseTimer();
             totalSeconds = 0;
             updateDisplay();
+            updateServerState();
             overlay.classList.remove('show');
         }
         
@@ -203,8 +331,23 @@
             e.preventDefault();
         });
         
-        // Inicializar display
+        // Verificar si hay un maestro activo
+        function checkMaster() {
+            const now = Date.now();
+            if (isMaster && now - lastSyncTime > 3000) {
+                // Si el maestro no ha sincronizado en 3 segundos, otro dispositivo puede tomar el control
+                isMaster = false;
+            }
+        }
+        
+        setInterval(checkMaster, 1000);
+        
+        // Inicializar
+        syncTimer();
         updateDisplay();
     </script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </body>
 </html>
